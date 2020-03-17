@@ -25,12 +25,19 @@ export function initExtend (Vue: GlobalAPI) {
       return cachedCtors[SuperId]
     }
 
+    // 验证组件名
     const name = extendOptions.name || Super.options.name
     if (process.env.NODE_ENV !== 'production' && name) {
       validateComponentName(name)
     }
 
+    // Vue.extend 的作用就是构造一个 Vue 的子类，
+    // 它使用原型继承的方式把一个纯对象转换成继承于 Vue 的构造器 Sub 并返回
+    // 然后对 Sub 这个对象本身扩展了一些属性 如：扩展 options、添加全局API等；
+    // 并且对配置中的 props 和 computed 做了初始化工作；
+    // 最后对 Sub 构造函数做了缓存，避免多次执行 Vue.extend 的时候对同一个子组件进行构造
     const Sub = function VueComponent (options) {
+      // 当我们实例化 Sub 的时候，就会执行 this._init 逻辑再次走到了 Vue 实例的初始化逻辑
       this._init(options)
     }
     Sub.prototype = Object.create(Super.prototype)

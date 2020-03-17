@@ -109,6 +109,10 @@ export function createComponent (
     return
   }
 
+  // baseCtor 实际上是 Vue 
+  // 这个定义在最开始初始化 Vue 的阶段 在 src/core/global-api/index.js 中的 initGlobaleApi 函数中有这么一个逻辑
+  // Vue.options._base = Vue
+  // 在 _init 函数中 将 options 都合并到了 $options 上 所以通过 context.$options._base 也能拿到 Vue 这个构造函数
   const baseCtor = context.$options._base
 
   // plain options object: turn it into a constructor
@@ -183,9 +187,13 @@ export function createComponent (
   }
 
   // install component management hooks onto the placeholder node
+  // 安装组件钩子函数
   installComponentHooks(data)
 
   // return a placeholder vnode
+  // 通过 new VNode 实例化一个 vnode 并返回
+  // 需要注意的是和普通元素节点的 vnode 不同，组件的 vnode 是没有 children 的
+  // VNode(tag, data, children...)
   const name = Ctor.options.name || tag
   const vnode = new VNode(
     `vue-component-${Ctor.cid}${name ? `-${name}` : ''}`,
@@ -223,6 +231,8 @@ export function createComponentInstanceForVnode (
   return new vnode.componentOptions.Ctor(options)
 }
 
+// installComponentHooks 就是把 componentVNodeHooks 的钩子函数合并到 data.hook 中
+// 在 VNode 执行 patch 的过程中执行相关的钩子函数
 function installComponentHooks (data: VNodeData) {
   const hooks = data.hook || (data.hook = {})
   for (let i = 0; i < hooksToMerge.length; i++) {
@@ -230,11 +240,13 @@ function installComponentHooks (data: VNodeData) {
     const existing = hooks[key]
     const toMerge = componentVNodeHooks[key]
     if (existing !== toMerge && !(existing && existing._merged)) {
+      // 如果某个时机钩子已经存在 data.hook 中 那么通过执行 mergeHook 函数做合并
       hooks[key] = existing ? mergeHook(toMerge, existing) : toMerge
     }
   }
 }
 
+// mergeHook 就是在最终执行的时候，依次执行这两个钩子函数
 function mergeHook (f1: any, f2: any): Function {
   const merged = (a, b) => {
     // flow complains about extra args which is why we use any
