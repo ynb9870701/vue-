@@ -44,6 +44,8 @@ const componentVNodeHooks = {
       const mountedNode: any = vnode // work around flow
       componentVNodeHooks.prepatch(mountedNode, mountedNode)
     } else {
+      // 通过 createComponentInstanceForVnode 创建一个 Vue 实例
+      // 然后调用 $mount 方法挂载子组件
       const child = vnode.componentInstance = createComponentInstanceForVnode(
         vnode,
         activeInstance
@@ -217,6 +219,8 @@ export function createComponentInstanceForVnode (
   vnode: any, // we know it's MountedComponentVNode but flow doesn't
   parent: any, // activeInstance in lifecycle state
 ): Component {
+  // _isComponent 表示一个组件
+  // parent 表示当前激活的组件实例
   const options: InternalComponentOptions = {
     _isComponent: true,
     _parentVnode: vnode,
@@ -228,6 +232,8 @@ export function createComponentInstanceForVnode (
     options.render = inlineTemplate.render
     options.staticRenderFns = inlineTemplate.staticRenderFns
   }
+  // vnode.componentOptions.Ctor 子组件的构造函数 它是继承于 Vue 的一个构造器 Sub
+  // 相当于 new Sub(options)
   return new vnode.componentOptions.Ctor(options)
 }
 

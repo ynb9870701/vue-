@@ -220,6 +220,8 @@ export function createPatchFunction (backend) {
   }
 
   function createComponent (vnode, insertedVnodeQueue, parentElm, refElm) {
+    // 如果 vnode 是一个组件 VNode 那么条件会满足
+    // 并且得到 i 就是 init 钩子函数
     let i = vnode.data
     if (isDef(i)) {
       const isReactivated = isDef(vnode.componentInstance) && i.keepAlive
