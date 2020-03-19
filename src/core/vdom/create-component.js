@@ -45,11 +45,13 @@ const componentVNodeHooks = {
       componentVNodeHooks.prepatch(mountedNode, mountedNode)
     } else {
       // 通过 createComponentInstanceForVnode 创建一个 Vue 实例
-      // 然后调用 $mount 方法挂载子组件
       const child = vnode.componentInstance = createComponentInstanceForVnode(
         vnode,
         activeInstance
       )
+      // 然后调用 $mount 方法挂载子组件
+      // hydrating 为服务端渲染 一般为false => child.$mount(undefined, false)
+      // 它最终会调用 mountComponent 方法 然后执行 vm._render() 
       child.$mount(hydrating ? vnode.elm : undefined, hydrating)
     }
   },
@@ -68,6 +70,8 @@ const componentVNodeHooks = {
 
   insert (vnode: MountedComponentVNode) {
     const { context, componentInstance } = vnode
+    // 每个组件都是在这个钩子函数中执行 mounted 钩子函数
+    // insertedVnodeQueue 的添加顺序是先子后父 所以同步渲染的子组件来说 mounted 钩子函数的执行顺序也是先子后父
     if (!componentInstance._isMounted) {
       componentInstance._isMounted = true
       callHook(componentInstance, 'mounted')

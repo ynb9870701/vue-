@@ -234,6 +234,7 @@ export function createPatchFunction (backend) {
       // in that case we can just return the element and be done.
       if (isDef(vnode.componentInstance)) {
         initComponent(vnode, insertedVnodeQueue)
+        // 执行 insert 完成组件的 DOM 插入 如果组件 patch 过程中又创建了子组件 那么 DOM 的插入顺序是先子后父
         insert(parentElm, vnode.elm, refElm)
         if (isTrue(isReactivated)) {
           reactivateComponent(vnode, insertedVnodeQueue, parentElm, refElm)

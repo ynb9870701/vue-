@@ -147,6 +147,11 @@ function mergeHook (
   parentVal: ?Array<Function>,
   childVal: ?Function | ?Array<Function>
 ): ?Array<Function> {
+  /**
+   * 多层三元运算符，先判断是否存在 childVal 如果不存在 直接返回 parentVal
+   * 如果 childVal 存在 则判断 parentVal 是否存在 如果存在就把 childVal 添加到 parentVal 后返回新数组
+   * 否则返回 childVal 数组
+   */
   const res = childVal
     ? parentVal
       ? parentVal.concat(childVal)
@@ -169,6 +174,7 @@ function dedupeHooks (hooks) {
   return res
 }
 
+// LIFECYCLE_HOOKS Vue 所有的钩子的名称
 LIFECYCLE_HOOKS.forEach(hook => {
   strats[hook] = mergeHook
 })
@@ -407,6 +413,7 @@ export function mergeOptions (
   // the result of another mergeOptions call.
   // Only merged options has the _base property.
   if (!child._base) {
+    // 将 extends 和 mixins 递归合并到 parent 身上
     if (child.extends) {
       parent = mergeOptions(parent, child.extends, vm)
     }
@@ -419,16 +426,21 @@ export function mergeOptions (
 
   const options = {}
   let key
+  // 遍历 parent 调用 mergeField
   for (key in parent) {
     mergeField(key)
   }
+  // 遍历 child
   for (key in child) {
+    // 如果 key 不在 parent 自身属性上 则调用 mergeField
     if (!hasOwn(parent, key)) {
       mergeField(key)
     }
   }
   function mergeField (key) {
     const strat = strats[key] || defaultStrat
+    // 对于钩子函数 合并策略都是 mergeHook 函数 
+    // 所以一旦 parent，child 都定义了相同的钩子函数，那么它们会把2个钩子函数合并成一个数组
     options[key] = strat(parent[key], child[key], vm, key)
   }
   return options

@@ -18,11 +18,18 @@ import {
   invokeWithErrorHandling
 } from '../util/index'
 
+// activeInstance 的作用就是保持当前上下文的 Vue 实例
 export let activeInstance: any = null
 export let isUpdatingChildComponent: boolean = false
 
 export function setActiveInstance(vm: Component) {
+  // 通过 prevActiveInstance 保留上一次的 activeInstance
+  // 实际上 prevActiveInstance 和 activeInstance 是一个父子关系
+  // 当一个 vm 实例完成它的所有子树的 patch 或者 update 过程后
+  // activeInstance 会回到它的父实例 这样就完美的保证了 createComponentInstanceForVnode 整个深度遍历过程中
+  // 在实例化子组件的时候传入当前子组件的父 Vue 实例, 并且在 _init 的过程中，通过 vm.$parent 把这个父子关系保留
   const prevActiveInstance = activeInstance
+  // 将当前 vm 赋值给 activeInstance
   activeInstance = vm
   return () => {
     activeInstance = prevActiveInstance
@@ -38,9 +45,10 @@ export function initLifecycle (vm: Component) {
     while (parent.$options.abstract && parent.$parent) {
       parent = parent.$parent
     }
+    // 把当前的 vm 存储到父实例的 $children 中
     parent.$children.push(vm)
   }
-
+  
   vm.$parent = parent
   vm.$root = parent ? parent.$root : vm
 
@@ -64,6 +72,7 @@ export function lifecycleMixin (Vue: Class<Component>) {
     const prevEl = vm.$el
     const prevVnode = vm._vnode
     const restoreActiveInstance = setActiveInstance(vm)
+    // vnode 就是通过 vm._render 返回的 vnode
     vm._vnode = vnode
     // Vue.prototype.__patch__ is injected in entry points
     // based on the rendering backend used.
@@ -77,6 +86,7 @@ export function lifecycleMixin (Vue: Class<Component>) {
       // updates
       vm.$el = vm.__patch__(prevVnode, vnode)
     }
+    // patch 过程后 恢复当前 vm 实例
     restoreActiveInstance()
     // update __vue__ reference
     if (prevEl) {
@@ -193,6 +203,8 @@ export function mountComponent (
     }
   } else {
     updateComponent = () => {
+      // 在 vm._render() 函数渲染 vnode 之前，执行了 beforeMount 钩子函数
+      // 在执行完 vm._update 把 VNode patch 到真实的 DOM 后 执行 mounted 钩子
       vm._update(vm._render(), hydrating)
     }
   }
@@ -205,6 +217,8 @@ export function mountComponent (
   new Watcher(vm, updateComponent, noop, {
     before () {
       if (vm._isMounted && !vm._isDestroyed) {
+        // beforeUpdate 钩子函数执行时机是在 渲染 Watcher 的 before 函数中
+        // 当组件挂载过 并且没有被消耗 才会执行这个钩子函数
         callHook(vm, 'beforeUpdate')
       }
     }
@@ -213,6 +227,9 @@ export function mountComponent (
 
   // manually mounted instance, call mounted on self
   // mounted is called for render-created child components in its inserted hook
+  // 如果 vn.$vnode 为 null 则表明不是一次组件的初始化过程 
+  // 而是我们通过外部 new Vue 初始化过程
+  // VNode patch 到 DOM 后 会执行 invokeInsertHook 会把这里面保存的钩子函数 依次执行一遍
   if (vm.$vnode == null) {
     // 表示这个实例已经挂载了 并执行 mounted 钩子函数
     vm._isMounted = true
@@ -345,6 +362,8 @@ export function deactivateChildComponent (vm: Component, direct?: boolean) {
 export function callHook (vm: Component, hook: string) {
   // #7573 disable dep collection when invoking lifecycle hooks
   pushTarget()
+  // 根据传入的字符串 hook 去拿到 vm.$options[hook] 对应的回调函数
+  // 然后遍历执行 执行时将 vm 作为上下文
   const handlers = vm.$options[hook]
   const info = `${hook} hook`
   if (handlers) {

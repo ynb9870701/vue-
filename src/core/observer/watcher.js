@@ -50,7 +50,9 @@ export default class Watcher {
     isRenderWatcher?: boolean
   ) {
     this.vm = vm
+    // 如果是一个渲染 Watcher
     if (isRenderWatcher) {
+      // 将当前实例赋值给 vm._watcher
       vm._watcher = this
     }
     vm._watchers.push(this)

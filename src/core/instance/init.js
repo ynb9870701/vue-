@@ -31,12 +31,15 @@ export function initMixin (Vue: Class<Component>) {
     // a flag to avoid this being observed
     vm._isVue = true
     // merge options
+    // _isComponent 表示是一个组件
     if (options && options._isComponent) {
       // optimize internal component instantiation
       // since dynamic options merging is pretty slow, and none of the
       // internal component options needs special treatment.
+      // 合并 options 的流程有变化 
       initInternalComponent(vm, options)
     } else {
+      // 合并 options 
       vm.$options = mergeOptions(
         resolveConstructorOptions(vm.constructor),
         options || {},
@@ -68,6 +71,8 @@ export function initMixin (Vue: Class<Component>) {
     }
     // 在初始化的最后 检测到如果有 el 属性，则调用vm.$mount方法挂载vm
     // 挂载的目的就是把模板渲染成最终的DOM
+
+    // 由于组件初始化的时候是不传 el 的，因此组件是自己接管了 $mount 的过程
     if (vm.$options.el) {
       vm.$mount(vm.$options.el)
     }
@@ -75,8 +80,11 @@ export function initMixin (Vue: Class<Component>) {
 }
 
 export function initInternalComponent (vm: Component, options: InternalComponentOptions) {
+  // vm.constuctor 就是子组件的构造函数 Sub
+  // 相当于 vm.$options = Object.create(Sub.options)
   const opts = vm.$options = Object.create(vm.constructor.options)
   // doing this because it's faster than dynamic enumeration.
+  // 将之前通过 createComponentInstanceForVnode 函数传入的几个参数合并到内部的选项 $options 中了
   const parentVnode = options._parentVnode
   opts.parent = options.parent
   opts._parentVnode = parentVnode
