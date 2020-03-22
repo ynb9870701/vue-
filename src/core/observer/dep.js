@@ -43,6 +43,8 @@ export default class Dep {
       // order
       subs.sort((a, b) => a.id - b.id)
     }
+    // 遍历所有的 subs 也就是 watcher 的实例数组
+    // 然后调用每一个 watcher 的 update 方法
     for (let i = 0, l = subs.length; i < l; i++) {
       subs[i].update()
     }
@@ -52,6 +54,8 @@ export default class Dep {
 // The current target watcher being evaluated.
 // This is globally unique because only one watcher
 // can be evaluated at a time.
+// 全局的唯一的一个 watcher 
+// 因为在同一时间只能有一个全局的 watcher 被计算，另外它的自身属性 subs 也是 watcher 的数组
 Dep.target = null
 const targetStack = []
 

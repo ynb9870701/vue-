@@ -461,15 +461,24 @@ export function resolveAsset (
   if (typeof id !== 'string') {
     return
   }
+
   const assets = options[type]
   // check local registration variations first
+  // 首先直接使用 id 拿
   if (hasOwn(assets, id)) return assets[id]
+  // 如果不存在则把 id 变成驼峰的形式在拿
   const camelizedId = camelize(id)
   if (hasOwn(assets, camelizedId)) return assets[camelizedId]
+  // 如果还不存在 在驼峰的基础上将首字母变成大写的形式再拿
   const PascalCaseId = capitalize(camelizedId)
   if (hasOwn(assets, PascalCaseId)) return assets[PascalCaseId]
+  /**
+   * 我们在使用 Vue.component(id, defintion) 全局注册组件的时候
+   * id 可以是连字符、驼峰、和首字母大写的几种形式
+   */
   // fallback to prototype chain
   const res = assets[id] || assets[camelizedId] || assets[PascalCaseId]
+  // 如果都取不到就报错
   if (process.env.NODE_ENV !== 'production' && warnMissing && !res) {
     warn(
       'Failed to resolve ' + type.slice(0, -1) + ': ' + id,

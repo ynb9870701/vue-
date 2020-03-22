@@ -81,6 +81,12 @@ function flushSchedulerQueue () {
   //    user watchers are created before the render watcher)
   // 3. If a component is destroyed during a parent component's watcher run,
   //    its watchers can be skipped.
+  // 队列排序 对队列从小到大的排序
+  // 1. 组件的更新由父到子；因为父组件的创建过程是优先于子组件的 
+  //    所以 watcher 的创建也是先父后子 执行顺序也应该保持先父后子
+  // 2. 用户自定义的 watcher 要优先于 watcher 执行；因为用户自定义 watcher 是在渲染 watcher 之前创建的
+  // 3. 如果一个组件在父组件的 watcher 执行期间被销毁 那么它对应的 watcher 执行都可以被跳过
+  //    所以父组件的 wathcer 应该先执行
   queue.sort((a, b) => a.id - b.id)
 
   // do not cache length because more watchers might be pushed
@@ -163,13 +169,19 @@ function callActivatedHooks (queue) {
  */
 export function queueWatcher (watcher: Watcher) {
   const id = watcher.id
+  // 保证同一个 Watcher 只添加一次
   if (has[id] == null) {
     has[id] = true
+    // 
     if (!flushing) {
+      // Vue 在做派发更新的时候并不会每次数据改变都会触发 watcher 的回调
+      // 而是把这些 watcher 先添加到一个队列中
+      // 然后在 nextTick 后执行 flushSchedulerQueue
       queue.push(watcher)
     } else {
       // if already flushing, splice the watcher based on its id
       // if already past its id, it will be run next immediately.
+      
       let i = queue.length - 1
       while (i > index && queue[i].id > watcher.id) {
         i--
@@ -177,6 +189,7 @@ export function queueWatcher (watcher: Watcher) {
       queue.splice(i + 1, 0, watcher)
     }
     // queue the flush
+    // waiting 保证 nextTick 调用逻辑只有一次
     if (!waiting) {
       waiting = true
 

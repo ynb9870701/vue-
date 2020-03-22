@@ -140,6 +140,9 @@ export function createComponent (
   if (isUndef(Ctor.cid)) {
     asyncFactory = Ctor
     Ctor = resolveAsyncComponent(asyncFactory, baseCtor)
+    // 如果是第一次执行 resolveAsyncComponent 
+    // 除非是高级异步组件 delay: 0 去创建了一个 loading 组件 否则返回的是 undefined
+    // 通过 createAsyncPlaceholder 去创建一个注释节点作为占位符
     if (Ctor === undefined) {
       // return a placeholder node for async component, which is rendered
       // as a comment node but preserves all the raw information for the node.

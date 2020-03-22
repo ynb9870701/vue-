@@ -35,6 +35,7 @@ const sharedPropertyDefinition = {
   set: noop
 }
 
+// proxy 代理的作用是把 props 和 data 上的属性代理到 vm 实例上
 export function proxy (target: Object, sourceKey: string, key: string) {
   sharedPropertyDefinition.get = function proxyGetter () {
     return this[sourceKey][key]
@@ -42,9 +43,15 @@ export function proxy (target: Object, sourceKey: string, key: string) {
   sharedPropertyDefinition.set = function proxySetter (val) {
     this[sourceKey][key] = val
   }
+  // 通过 Object.defineProperty 把 target[sourceKey][key] 的读写变成了对 target[key] 的读写
+  // vm._props.xxx vm.xxx
+  // vn._data.xxx vm.xxx
   Object.defineProperty(target, key, sharedPropertyDefinition)
 }
 
+/**
+ * initState 方法主要是对 props、methods、data、computed、watcher等属性做了初始化操作
+ */
 export function initState (vm: Component) {
   vm._watchers = []
   const opts = vm.$options
@@ -72,6 +79,7 @@ function initProps (vm: Component, propsOptions: Object) {
   if (!isRoot) {
     toggleObserving(false)
   }
+  // 遍历定义的 props 配置
   for (const key in propsOptions) {
     keys.push(key)
     const value = validateProp(key, propsOptions, propsData, vm)
@@ -97,10 +105,11 @@ function initProps (vm: Component, propsOptions: Object) {
         }
       })
     } else {
+      // 调用 defineReactive 将每个 prop 变成响应式
       defineReactive(props, key, value)
     }
     // static props are already proxied on the component's prototype
-    // during Vue.extend(). We only need to proxy props defined at
+    // during Vue.extend(). We only need to proxy props defined at 
     // instantiation here.
     if (!(key in vm)) {
       proxy(vm, `_props`, key)
@@ -111,6 +120,7 @@ function initProps (vm: Component, propsOptions: Object) {
 
 function initData (vm: Component) {
   let data = vm.$options.data
+  // 判断data是不是一个函数
   data = vm._data = typeof data === 'function'
     ? getData(data, vm)
     : data || {}
@@ -261,6 +271,7 @@ function createGetterInvoker(fn) {
 
 function initMethods (vm: Component, methods: Object) {
   const props = vm.$options.props
+  // 遍历 methods
   for (const key in methods) {
     if (process.env.NODE_ENV !== 'production') {
       if (typeof methods[key] !== 'function') {
@@ -283,6 +294,7 @@ function initMethods (vm: Component, methods: Object) {
         )
       }
     }
+    // 如果 methods[key] 是一个函数 则将 this 指针绑定 vm
     vm[key] = typeof methods[key] !== 'function' ? noop : bind(methods[key], vm)
   }
 }

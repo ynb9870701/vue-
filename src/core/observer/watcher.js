@@ -70,8 +70,11 @@ export default class Watcher {
     this.id = ++uid // uid for batching
     this.active = true
     this.dirty = this.lazy // for lazy watchers
+    // 一些 Dep 相关的属性
+    // deps 和 newDeps 表示 Watcher 实例持有的 Dep 实例的数组
     this.deps = []
     this.newDeps = []
+    // depIds 和 newDepIds 分别代表 deps 和 newDeps 的id
     this.depIds = new Set()
     this.newDepIds = new Set()
     this.expression = process.env.NODE_ENV !== 'production'
@@ -92,6 +95,8 @@ export default class Watcher {
         )
       }
     }
+    // 当实例化一个渲染 watcher 的时候 首先会进入 watcher 的构造函数逻辑
+    // 然后会执行 this.get 方法
     this.value = this.lazy
       ? undefined
       : this.get()
@@ -101,6 +106,7 @@ export default class Watcher {
    * Evaluate the getter, and re-collect dependencies.
    */
   get () {
+    // 把 Dep.target 赋值为当前的 watcher 并压栈
     pushTarget(this)
     let value
     const vm = this.vm
@@ -119,6 +125,7 @@ export default class Watcher {
         traverse(value)
       }
       popTarget()
+      // 依赖清空
       this.cleanupDeps()
     }
     return value
@@ -129,10 +136,13 @@ export default class Watcher {
    */
   addDep (dep: Dep) {
     const id = dep.id
+    // 做一些逻辑判断(保证同一数据不会被添加多次)
     if (!this.newDepIds.has(id)) {
       this.newDepIds.add(id)
       this.newDeps.push(dep)
       if (!this.depIds.has(id)) {
+        // 把当前的 watcher 订阅到这个数据持有的 dep 的 subs 中
+        // 为后续数据变化时候能通知那些 subs 做准备
         dep.addSub(this)
       }
     }
@@ -141,8 +151,21 @@ export default class Watcher {
   /**
    * Clean up for dependency collection.
    */
-  cleanupDeps () {
+  /**
+   * 考虑到 Vue 是数据驱动的，所以每次数据变化都会重新 render，
+   * 那么 vm._render() 方法又会再次执行，并再次触发数据的 getters，
+   * 所以 Wathcer 在构造函数中会初始化 2 个 Dep 实例数组，
+   * newDeps 表示新添加的 Dep 实例数组，
+   * 而 deps 表示上一次添加的 Dep 实例数组。
+   */
+   cleanupDeps () {
     let i = this.deps.length
+    /**
+     * 在执行 cleanupDeps 函数的时候，
+     * 会首先遍历 deps 移除对 dep.subs 数组中 Wathcer 的订阅，
+     * 然后把 newDepIds 和 depIds 交换，newDeps 和 deps 交换，
+     * 并把 newDepIds 和 newDeps 清空。
+     */
     while (i--) {
       const dep = this.deps[i]
       if (!this.newDepIds.has(dep.id)) {
@@ -181,6 +204,7 @@ export default class Watcher {
   run () {
     if (this.active) {
       const value = this.get()
+      // 如果满足新旧值不等、新值是对象类型、deep 模式任何一个条件，则执行 watcher 的回调
       if (
         value !== this.value ||
         // Deep watchers and watchers on Object/Arrays should fire even
@@ -194,6 +218,8 @@ export default class Watcher {
         this.value = value
         if (this.user) {
           try {
+            // 回调函数执行的时候会把第一个和第二个参数传入新值 value 和旧值 oldValue，
+            // 这就是当我们添加自定义 watcher 的时候能在回调函数的参数中拿到新旧值的原因。
             this.cb.call(this.vm, value, oldValue)
           } catch (e) {
             handleError(e, this.vm, `callback for watcher "${this.expression}"`)

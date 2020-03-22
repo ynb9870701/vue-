@@ -41,8 +41,10 @@ export class Observer {
 
   constructor (value: any) {
     this.value = value
+    // 实例化 Dep 对象
     this.dep = new Dep()
     this.vmCount = 0
+    // 调用 def 函数把自身实例添加到数据对象 value 的 __ob__ 属性上
     def(value, '__ob__', this)
     if (Array.isArray(value)) {
       if (hasProto) {
@@ -50,6 +52,7 @@ export class Observer {
       } else {
         copyAugment(value, arrayMethods, arrayKeys)
       }
+      // 遍历数组再次调用 observe 方法
       this.observeArray(value)
     } else {
       this.walk(value)
@@ -132,6 +135,7 @@ export function observe (value: any, asRootData: ?boolean): Observer | void {
 /**
  * Define a reactive property on an Object.
  */
+// 定义一个响应式对象 给对象动态添加 getter 和 setter
 export function defineReactive (
   obj: Object,
   key: string,
@@ -152,7 +156,8 @@ export function defineReactive (
   if ((!getter || setter) && arguments.length === 2) {
     val = obj[key]
   }
-
+  // 对子对象递归调用 observe 方法 不管 obj 的结构多复杂 它的所有子属性也能变成响应式的对象
+  // 这样我们访问或修改 obj 中一个嵌套较深的属性也能触发 getter 和 setter
   let childOb = !shallow && observe(val)
   Object.defineProperty(obj, key, {
     enumerable: true,
@@ -160,6 +165,7 @@ export function defineReactive (
     get: function reactiveGetter () {
       const value = getter ? getter.call(obj) : val
       if (Dep.target) {
+        // 依赖收集
         dep.depend()
         if (childOb) {
           childOb.dep.depend()
@@ -187,7 +193,9 @@ export function defineReactive (
       } else {
         val = newVal
       }
+      // 如果 shallow 为 false 的情况 会对新设置的值变成一个响应式对象
       childOb = !shallow && observe(newVal)
+      // 通知所有订阅者
       dep.notify()
     }
   })
