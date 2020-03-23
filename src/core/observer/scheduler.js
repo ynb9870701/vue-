@@ -91,13 +91,18 @@ function flushSchedulerQueue () {
 
   // do not cache length because more watchers might be pushed
   // as we run existing watchers
+  // 在遍历的时候每次都会对 queue.length 求值
+  // 因为在 watcher.run() 的时候，很可能用户会再次添加新的 watcher 
+  // 这样就会再次执行到 queueWatcher 
   for (index = 0; index < queue.length; index++) {
+    // 拿到对应的 Watcher
     watcher = queue[index]
     if (watcher.before) {
       watcher.before()
     }
     id = watcher.id
     has[id] = null
+    // 执行 run 方法
     watcher.run()
     // in dev build, check and stop circular updates.
     if (process.env.NODE_ENV !== 'production' && has[id] != null) {
@@ -119,10 +124,13 @@ function flushSchedulerQueue () {
   // keep copies of post queues before resetting state
   const activatedQueue = activatedChildren.slice()
   const updatedQueue = queue.slice()
-
+  // 状态恢复
+  // 将 watcher 队列清空 
+  // 把这些控制流程状态的一些变量恢复到初始值
   resetSchedulerState()
 
   // call component updated and activated hooks
+  // 调用组件更新和激活的钩子函数
   callActivatedHooks(activatedQueue)
   callUpdatedHooks(updatedQueue)
 
@@ -181,7 +189,10 @@ export function queueWatcher (watcher: Watcher) {
     } else {
       // if already flushing, splice the watcher based on its id
       // if already past its id, it will be run next immediately.
-      
+      // 当 watcher.run 的时候 可能用户会再次添加新的 watcher
+      // 此时走到下面这个逻辑
+      // 从后往前找 找到第一个待插入 watcher 的 id 比当前队列中 watcher 的 id 大的位置
+      // 把 watcher 按 id 插入到队列中 此时 queue 的长度发生了变化
       let i = queue.length - 1
       while (i > index && queue[i].id > watcher.id) {
         i--

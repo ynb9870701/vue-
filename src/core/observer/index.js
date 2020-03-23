@@ -207,20 +207,26 @@ export function defineReactive (
  * already exist.
  */
 export function set (target: Array<any> | Object, key: any, val: any): any {
+  // 不能设置原始属性
   if (process.env.NODE_ENV !== 'production' &&
     (isUndef(target) || isPrimitive(target))
   ) {
     warn(`Cannot set reactive property on undefined, null, or primitive value: ${(target: any)}`)
   }
+  // 首先判断 target 是一个数组 并且 key 是一个合法的下标
   if (Array.isArray(target) && isValidArrayIndex(key)) {
+    // 添加到数组 并返回
     target.length = Math.max(target.length, key)
     target.splice(key, 1, val)
     return val
   }
+  // 接着判断 key 是否存在于 target 中
+  // 存在则直接返回 因为这样的变化是可以观测到的
   if (key in target && !(key in Object.prototype)) {
     target[key] = val
     return val
   }
+  // target.__ob__ Observer 的构造函数初始化的时候将实例挂载到了 __ob__
   const ob = (target: any).__ob__
   if (target._isVue || (ob && ob.vmCount)) {
     process.env.NODE_ENV !== 'production' && warn(
@@ -229,11 +235,14 @@ export function set (target: Array<any> | Object, key: any, val: any): any {
     )
     return val
   }
+  // 如果没有 ob 则表示不是一个响应式对象 直接赋值返回
   if (!ob) {
     target[key] = val
     return val
   }
+  // 最后通过 defineReactive 把新添加的属性变成响应式对象
   defineReactive(ob.value, key, val)
+  // 然后在通过 ob.dep.notify() 手动触发通知
   ob.dep.notify()
   return val
 }

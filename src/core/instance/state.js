@@ -178,12 +178,15 @@ const computedWatcherOptions = { lazy: true }
 
 function initComputed (vm: Component, computed: Object) {
   // $flow-disable-line
+  // 创建 vm._computedWatchers 为一个空对象
   const watchers = vm._computedWatchers = Object.create(null)
   // computed properties are just getters during SSR
   const isSSR = isServerRendering()
-
+  // 遍历 computed
   for (const key in computed) {
+    // 拿到每一个属性 userDef
     const userDef = computed[key]
+    // 尝试获取 userDef 的 getter 函数
     const getter = typeof userDef === 'function' ? userDef : userDef.get
     if (process.env.NODE_ENV !== 'production' && getter == null) {
       warn(
@@ -194,6 +197,8 @@ function initComputed (vm: Component, computed: Object) {
 
     if (!isSSR) {
       // create internal watcher for the computed property.
+      // 为每一个 getter 创建一个 computed watcher
+      // computedWatcherOptions = { lazy: true }
       watchers[key] = new Watcher(
         vm,
         getter || noop,
@@ -205,9 +210,11 @@ function initComputed (vm: Component, computed: Object) {
     // component-defined computed properties are already defined on the
     // component prototype. We only need to define computed properties defined
     // at instantiation here.
+    // 如果 key 不是 vm属性 则调用 defineComputed
     if (!(key in vm)) {
       defineComputed(vm, key, userDef)
     } else if (process.env.NODE_ENV !== 'production') {
+      // 否则判断计算属性的 key 是否已经被 data 或者 props 所占用
       if (key in vm.$data) {
         warn(`The computed property "${key}" is already defined in data.`, vm)
       } else if (vm.$options.props && key in vm.$options.props) {
@@ -245,6 +252,8 @@ export function defineComputed (
       )
     }
   }
+  // 给对应的 key 值添加 getter 和 setter
+  // setter 通常是 计算属性是一个对象，并且拥有 set 方法的时候才有 否则是一个空函数
   Object.defineProperty(target, key, sharedPropertyDefinition)
 }
 
@@ -300,8 +309,12 @@ function initMethods (vm: Component, methods: Object) {
 }
 
 function initWatch (vm: Component, watch: Object) {
+  // 对 watch 对象做遍历
   for (const key in watch) {
+    // 拿到每一个 handler
     const handler = watch[key]
+    // Vue 是支持 watch 的同一个 key 对应多个 handler
+    // 所以如果 handler 是一个数组 则遍历这个数组
     if (Array.isArray(handler)) {
       for (let i = 0; i < handler.length; i++) {
         createWatcher(vm, key, handler[i])
@@ -318,6 +331,7 @@ function createWatcher (
   handler: any,
   options?: Object
 ) {
+  // 对 handler 的类型做判断 拿到它最终的回调函数
   if (isPlainObject(handler)) {
     options = handler
     handler = handler.handler
@@ -325,6 +339,7 @@ function createWatcher (
   if (typeof handler === 'string') {
     handler = vm[handler]
   }
+  // 最后调用 vm.$watch 函数
   return vm.$watch(expOrFn, handler, options)
 }
 
@@ -360,12 +375,19 @@ export function stateMixin (Vue: Class<Component>) {
     options?: Object
   ): Function {
     const vm: Component = this
+    // 判断 cb 如果是一个对象 则调用 createWatcher 方法
+    // 这是因为 $watch 方法是用户可以直接调用的 它可以传递一个对象，也可以传递一个函数
     if (isPlainObject(cb)) {
       return createWatcher(vm, expOrFn, cb, options)
     }
     options = options || {}
+    // 用户创建 user watcher
     options.user = true
+    // 实例化一个 watcher
+    // 一旦 watch 的数据发生变化 它最终会执行 watcher 的 run 方法
+    // 执行回调函数 cb 
     const watcher = new Watcher(vm, expOrFn, cb, options)
+    // 如果设置了 immediate 为 true 则直接会执行回调函数 cb
     if (options.immediate) {
       try {
         cb.call(vm, watcher.value)
@@ -373,6 +395,7 @@ export function stateMixin (Vue: Class<Component>) {
         handleError(error, vm, `callback for immediate watcher "${watcher.expression}"`)
       }
     }
+    // 最终返回了 unwatchFn 函数 它会调用 watcher 的 teardown 方法移除这个 watcher
     return function unwatchFn () {
       watcher.teardown()
     }

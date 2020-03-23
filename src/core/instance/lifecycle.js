@@ -212,6 +212,8 @@ export function mountComponent (
   // we set this to vm._watcher inside the watcher's constructor
   // since the watcher's initial patch may call $forceUpdate (e.g. inside child
   // component's mounted hook), which relies on vm._watcher being already defined
+
+  
   // mountComponent 的核心就是先实例化一个渲染watcher, 在它的回调中调用 updateComponent 方法
   // 在 updateComponent 方法中调用 vm._render 方法生成虚拟 Node 最终调用 vn._update 更新DOM
   new Watcher(vm, updateComponent, noop, {
@@ -227,6 +229,8 @@ export function mountComponent (
 
   // manually mounted instance, call mounted on self
   // mounted is called for render-created child components in its inserted hook
+
+
   // 如果 vn.$vnode 为 null 则表明不是一次组件的初始化过程 
   // 而是我们通过外部 new Vue 初始化过程
   // VNode patch 到 DOM 后 会执行 invokeInsertHook 会把这里面保存的钩子函数 依次执行一遍

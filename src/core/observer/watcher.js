@@ -121,6 +121,7 @@ export default class Watcher {
     } finally {
       // "touch" every property so they are all tracked as
       // dependencies for deep watching
+      // 深度观测
       if (this.deep) {
         traverse(value)
       }
@@ -191,6 +192,8 @@ export default class Watcher {
     if (this.lazy) {
       this.dirty = true
     } else if (this.sync) {
+      // 设置了 sync 就会在当前 tick 中同步执行 watcher 的回调函数
+      // 只有当需要 watch 的值的变化到之心 watcher 的回调函数是一个同步过程的时候 才会去设置该属性
       this.run()
     } else {
       queueWatcher(this)

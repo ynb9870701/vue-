@@ -39,9 +39,13 @@ let timerFunc
 // completely stops working after triggering a few times... so, if native
 // Promise is available, we will use it:
 /* istanbul ignore next, $flow-disable-line */
+
+// 1.Promise -> 2.MutationObserver -> 3.setImmediate -> 4.setTimeout
+// native Promise 存在
 if (typeof Promise !== 'undefined' && isNative(Promise)) {
   const p = Promise.resolve()
   timerFunc = () => {
+    // flushCallbacks 的作用是将回调队列清空 遍历并执行每个回调
     p.then(flushCallbacks)
     // In problematic UIWebViews, Promise.then doesn't completely break, but
     // it can get stuck in a weird state where callbacks are pushed into the
@@ -74,6 +78,7 @@ if (typeof Promise !== 'undefined' && isNative(Promise)) {
   // Fallback to setImmediate.
   // Technically it leverages the (macro) task queue,
   // but it is still a better choice than setTimeout.
+  // setImmediate 
   timerFunc = () => {
     setImmediate(flushCallbacks)
   }
@@ -84,6 +89,7 @@ if (typeof Promise !== 'undefined' && isNative(Promise)) {
   }
 }
 
+// cb 回调函数 ctx 回调执行上下问
 export function nextTick (cb?: Function, ctx?: Object) {
   let _resolve
   callbacks.push(() => {
@@ -98,10 +104,13 @@ export function nextTick (cb?: Function, ctx?: Object) {
     }
   })
   if (!pending) {
+    // 标记是否已经向任务队列添加了一个任务 这就是多次触发一个 watcher 只会被推入更新队列一次的原因
     pending = true
     timerFunc()
   }
   // $flow-disable-line
+  // 如果未提供回调 并且存在 Promise 即返回一个 Promise
+  // 所以支持 this.$nextTick().then(() => {}) 的写法
   if (!cb && typeof Promise !== 'undefined') {
     return new Promise(resolve => {
       _resolve = resolve
