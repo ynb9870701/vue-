@@ -310,7 +310,9 @@ function normalizeProps (options: Object, vm: ?Component) {
     i = props.length
     while (i--) {
       val = props[i]
+      // 当 props 是一个数组的时候 prop 只能是一个 string
       if (typeof val === 'string') {
+        // 转换成驼峰
         name = camelize(val)
         res[name] = { type: null }
       } else if (process.env.NODE_ENV !== 'production') {
@@ -318,9 +320,12 @@ function normalizeProps (options: Object, vm: ?Component) {
       }
     }
   } else if (isPlainObject(props)) {
+    // props 如果是一个对象
     for (const key in props) {
       val = props[key]
+      // 转换成驼峰
       name = camelize(key)
+      // 如果 value 不是一个对象 则将它规范为一个对象
       res[name] = isPlainObject(val)
         ? val
         : { type: val }

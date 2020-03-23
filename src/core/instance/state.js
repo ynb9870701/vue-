@@ -82,6 +82,7 @@ function initProps (vm: Component, propsOptions: Object) {
   // 遍历定义的 props 配置
   for (const key in propsOptions) {
     keys.push(key)
+    // 校验
     const value = validateProp(key, propsOptions, propsData, vm)
     /* istanbul ignore else */
     if (process.env.NODE_ENV !== 'production') {

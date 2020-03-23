@@ -33,6 +33,9 @@ export const emptyNode = new VNode('', {}, [])
 const hooks = ['create', 'activate', 'update', 'remove', 'destroy']
 
 function sameVnode (a, b) {
+  // 首先判断链两个 vnode 的 key 是不是相等
+  // 然后对于同步组件 判断 tag、isCommont、data、input 类型是否相等
+  // 对于异步组件 判断 asyncFactory 是否相同
   return (
     a.key === b.key && (
       (
@@ -378,14 +381,21 @@ export function createPatchFunction (backend) {
     }
   }
 
+  // 删除节点
   function removeVnodes (vnodes, startIdx, endIdx) {
+    // 遍历待删除的 vnodes 做删除
     for (; startIdx <= endIdx; ++startIdx) {
       const ch = vnodes[startIdx]
       if (isDef(ch)) {
         if (isDef(ch.tag)) {
+          // 作用是从 DOM 中移除节点并执行 module 的 remove 钩子函数
+          // 并对它的子节点递归调用 removeAndInvokeRemoveHook 钩子函数
           removeAndInvokeRemoveHook(ch)
+          // invokeDestroyHook 是执行 module 的 destory 钩子函数以及 vnode 的 destory 钩子函数，
+          // 并对它的子 vnode 递归调用 invokeDestroyHook 函数；
           invokeDestroyHook(ch)
         } else { // Text node
+          // removeNode 就是调用平台的 DOM API 去把真正的 DOM 节点移除。
           removeNode(ch.elm)
         }
       }
@@ -422,15 +432,14 @@ export function createPatchFunction (backend) {
   }
 
   function updateChildren (parentElm, oldCh, newCh, insertedVnodeQueue, removeOnly) {
-    let oldStartIdx = 0
-    let newStartIdx = 0
-    let oldEndIdx = oldCh.length - 1
-    let oldStartVnode = oldCh[0]
-    let oldEndVnode = oldCh[oldEndIdx]
-    let newEndIdx = newCh.length - 1
-    let newStartVnode = newCh[0]
-    let newEndVnode = newCh[newEndIdx]
-    let oldKeyToIdx, idxInOld, vnodeToMove, refElm
+    let oldStartIdx = 0 // 老 node children 数组的开始索引
+    let newStartIdx = 0 // 新 node children 数组的开始索引
+    let oldEndIdx = oldCh.length - 1 // 老node children 数组最后一个索引
+    let oldStartVnode = oldCh[0] // 老 node 的第一个 children 节点
+    let oldEndVnode = oldCh[oldEndIdx] // 老 node 的最后一个 children 节点
+    let newEndIdx = newCh.length - 1 // 新 node children 数组最后一个索引
+    let newStartVnode = newCh[0] // 新 node 的第一个 children 节点
+    let newEndVnode = newCh[newEndIdx] // 新 node 的最后一个 children 节点
 
     // removeOnly is a special flag used only by <transition-group>
     // to ensure removed elements stay in correct relative positions
@@ -441,30 +450,91 @@ export function createPatchFunction (backend) {
       checkDuplicateKeys(newCh)
     }
 
+    /**
+     * 第一步
+     * oldStartIdx                      oldEndIdx
+     * A           B         C          D                     
+     * D           C         B          A           E
+     * newStartIdx                                  newEndIdx
+     * 
+     * 第二步
+     *             oldStartIdx             oldEndIdx
+     * D           A            B          C                               
+     * D           C            B          A           E
+     *             newStartIdx                        newEndIdx
+     * 
+     * 第三步
+     *                          oldStartIdx   oldEndIdx
+     * D           C            A             B                               
+     * D           C            B             A           E
+     *                          newStartIdx               newEndIdx
+     * 
+     * 
+     * 第四步
+     *                                        oldStartIdx
+     *                                        oldEndIdx
+     * D           C            B             A                               
+     * D           C            B             A            E
+     *                                        newStartIdx  newEndIdx
+     * 
+     * 第五步
+     *                                        oldEndIdx    oldStartIdx
+     * D           C            B             A                               
+     * D           C            B             A            E
+     *                                                     newEndIdx
+     *                                                     newStartIdx
+     * 
+     * 第六步
+     *                                        oldEndIdx    oldStartIdx
+     * D           C            B             A            E                  
+     * D           C            B             A            E
+     *                                                     newEndIdx
+     *                                                     newStartIdx
+     */
+
+    // 当老 node children 数组的开始节点小于或等于老 node children 数组的结束节点 
+    // 新 node children 数组的开始节点小于或等于新 node children 数组的结束节点
     while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
-      if (isUndef(oldStartVnode)) {
+      if (isUndef(oldStartVnode)) { 
+        // 如果老 node children 数组是空
+        // 则开始节点+1 然后开始渲染，这个时候 oldStartIdx 会不断的累加 直到找到一个存在的节点 或者一直遍历到最后
         oldStartVnode = oldCh[++oldStartIdx] // Vnode has been moved left
-      } else if (isUndef(oldEndVnode)) {
+      } else if (isUndef(oldEndVnode)) { 
+        // 然后终于找到了老 node 的合法开始节点，然后开始寻找老 node 的合法的结束节点
+        // 如果不合法，则结束索引往前去，直到找到
         oldEndVnode = oldCh[--oldEndIdx]
-      } else if (sameVnode(oldStartVnode, newStartVnode)) {
+      } else if (sameVnode(oldStartVnode, newStartVnode)) { 
+        // 然后开始判断 老 node 的开始节点和新 node 的开始节点 如果一样的话
+        // 执行 patchVnode，然后新老 node 的开始索引分别+1，然后开始新一轮循环
         patchVnode(oldStartVnode, newStartVnode, insertedVnodeQueue, newCh, newStartIdx)
         oldStartVnode = oldCh[++oldStartIdx]
         newStartVnode = newCh[++newStartIdx]
-      } else if (sameVnode(oldEndVnode, newEndVnode)) {
+      } else if (sameVnode(oldEndVnode, newEndVnode)) { 
+        // 如果上一步新老 node 开始节点不一致的话，则比较新老 node 的结束节点,如果一致的话
+        // 则进行 patchVnode，同时新老 node 的结束索引分别-1
         patchVnode(oldEndVnode, newEndVnode, insertedVnodeQueue, newCh, newEndIdx)
         oldEndVnode = oldCh[--oldEndIdx]
         newEndVnode = newCh[--newEndIdx]
       } else if (sameVnode(oldStartVnode, newEndVnode)) { // Vnode moved right
+        // 如果上面两个都不满足，即新老 node 的开始节点不一样，
+        // 而且结束节点也不一样，则比较老 node 的开始节点和新 node 的结束节点
+        // 如果一样的话，执行 patchVnode
         patchVnode(oldStartVnode, newEndVnode, insertedVnodeQueue, newCh, newEndIdx)
+        // 同时因为老 node 的开始节点竟然与新 node 的结束节点一致，
+        // 说明老 node 的开始节点需要移动到当前的老 node 结束节点的后一位
         canMove && nodeOps.insertBefore(parentElm, oldStartVnode.elm, nodeOps.nextSibling(oldEndVnode.elm))
         oldStartVnode = oldCh[++oldStartIdx]
         newEndVnode = newCh[--newEndIdx]
       } else if (sameVnode(oldEndVnode, newStartVnode)) { // Vnode moved left
+        // 老 node 的结束节点与新 node 的开始节点一致
+        // patchVnode
         patchVnode(oldEndVnode, newStartVnode, insertedVnodeQueue, newCh, newStartIdx)
+        // 则老 node 的结束节点移动到老 node 的开始节点之前即可
         canMove && nodeOps.insertBefore(parentElm, oldEndVnode.elm, oldStartVnode.elm)
         oldEndVnode = oldCh[--oldEndIdx]
         newStartVnode = newCh[++newStartIdx]
       } else {
+         // 如果以上都不满足，则执行key比较，
         if (isUndef(oldKeyToIdx)) oldKeyToIdx = createKeyToOldIdx(oldCh, oldStartIdx, oldEndIdx)
         idxInOld = isDef(newStartVnode.key)
           ? oldKeyToIdx[newStartVnode.key]
@@ -518,6 +588,7 @@ export function createPatchFunction (backend) {
     }
   }
 
+  // 将新的 vnode patch 到旧的 vnode 上
   function patchVnode (
     oldVnode,
     vnode,
@@ -561,33 +632,48 @@ export function createPatchFunction (backend) {
 
     let i
     const data = vnode.data
+
+    // 执行 prepatch 钩子函数
     if (isDef(data) && isDef(i = data.hook) && isDef(i = i.prepatch)) {
       i(oldVnode, vnode)
     }
 
     const oldCh = oldVnode.children
     const ch = vnode.children
+
+    // 执行 update 钩子函数
+    // 会执行所有 module 的 update 钩子函数以及 用户自定义的 update 钩子函数
     if (isDef(data) && isPatchable(vnode)) {
       for (i = 0; i < cbs.update.length; ++i) cbs.update[i](oldVnode, vnode)
       if (isDef(i = data.hook) && isDef(i = i.update)) i(oldVnode, vnode)
     }
+
+    // 如果不是文本节点 则判断他们的子节点 并且分了几种情况
     if (isUndef(vnode.text)) {
-      if (isDef(oldCh) && isDef(ch)) {
+      if (isDef(oldCh) && isDef(ch)) { // 新旧子节点都存在
+        // 不相同时 使用 updateChildren 来更新子节点
         if (oldCh !== ch) updateChildren(elm, oldCh, ch, insertedVnodeQueue, removeOnly)
-      } else if (isDef(ch)) {
+      } else if (isDef(ch)) { // 如果只有 ch 存在 表示旧节点不需要了
         if (process.env.NODE_ENV !== 'production') {
           checkDuplicateKeys(ch)
         }
+        // 如果旧节点是一个文本节点 先将节点的文本清除
         if (isDef(oldVnode.text)) nodeOps.setTextContent(elm, '')
+        // 然后通过 addVnodes 将 ch 批量插入到新节点 elm 下
         addVnodes(elm, null, ch, 0, ch.length - 1, insertedVnodeQueue)
-      } else if (isDef(oldCh)) {
+      } else if (isDef(oldCh)) { // 如果只有 oldCh 存在 表示更新的是空节点
+        // 将旧的节点通过 removeVnodes 全部清除
         removeVnodes(oldCh, 0, oldCh.length - 1)
-      } else if (isDef(oldVnode.text)) {
+      } else if (isDef(oldVnode.text)) { // 当只有旧节点是文本节点的时候 清除其节点文本内容
         nodeOps.setTextContent(elm, '')
       }
     } else if (oldVnode.text !== vnode.text) {
+      // 如果 vnode 是一个文本节点且新旧文本不相同
+      // 直接替换文本内容
       nodeOps.setTextContent(elm, vnode.text)
     }
+
+    // 执行 postpatch 钩子函数
     if (isDef(data)) {
       if (isDef(i = data.hook) && isDef(i = i.postpatch)) i(oldVnode, vnode)
     }
@@ -739,6 +825,8 @@ export function createPatchFunction (backend) {
       const isRealElement = isDef(oldVnode.nodeType)
       if (!isRealElement && sameVnode(oldVnode, vnode)) {
         // patch existing root node
+        
+        // 新旧节点相同 调用 patchNode 方法
         patchVnode(oldVnode, vnode, insertedVnodeQueue, null, null, removeOnly)
       } else {
         if (isRealElement) {
@@ -771,8 +859,11 @@ export function createPatchFunction (backend) {
           // 通过 emptyNodeAt 方法转换成 VNode 对象
           oldVnode = emptyNodeAt(oldVnode)
         }
-
         // replacing existing element
+
+        // 如果新旧接地那不同 那么更新的逻辑非常简单 本质上是要替换已存在的节点
+        // 大致分为3步
+        // 第1步 以当前旧节点为参考节点，创建新节点，并插入 DOM 中
         const oldElm = oldVnode.elm
         const parentElm = nodeOps.parentNode(oldElm)
 
@@ -789,6 +880,8 @@ export function createPatchFunction (backend) {
         )
 
         // update parent placeholder node element, recursively
+
+        // 第2步 更新父的占位符节点
         if (isDef(vnode.parent)) {
           let ancestor = vnode.parent
           const patchable = isPatchable(vnode)
@@ -819,6 +912,8 @@ export function createPatchFunction (backend) {
         }
 
         // destroy old node
+
+        // 第3步 删除旧节点
         if (isDef(parentElm)) {
           removeVnodes([oldVnode], 0, 0)
         } else if (isDef(oldVnode.tag)) {
