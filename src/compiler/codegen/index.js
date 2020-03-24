@@ -45,6 +45,7 @@ export function generate (
   options: CompilerOptions
 ): CodegenResult {
   const state = new CodegenState(options)
+  // 通过 genElement 生成 code
   const code = ast ? genElement(ast, state) : '_c("div")'
   return {
     render: `with(this){return ${code}}`,
@@ -57,6 +58,7 @@ export function genElement (el: ASTElement, state: CodegenState): string {
     el.pre = el.pre || el.parent.pre
   }
 
+  // 判断当前 AST 元素节点的属性执行不同的代码生成函数
   if (el.staticRoot && !el.staticProcessed) {
     return genStatic(el, state)
   } else if (el.once && !el.onceProcessed) {
@@ -162,7 +164,11 @@ function genIfConditions (
     return altEmpty || '_e()'
   }
 
+  // 依次从 conditions 获取第一个 conditions
   const condition = conditions.shift()
+  // 然后通过对 conditions.exo 去生成一段三元运算符代码
+  // : 后是递归调用 genIfConditions
+  // 如果有多个 confition 就生成多层三元运算符
   if (condition.exp) {
     return `(${condition.exp})?${
       genTernaryExp(condition.block)
@@ -189,6 +195,7 @@ export function genFor (
   altGen?: Function,
   altHelper?: string
 ): string {
+  // 首先从 AST 元素节点中获取了一些和 for 相关的属性
   const exp = el.for
   const alias = el.alias
   const iterator1 = el.iterator1 ? `,${el.iterator1}` : ''
@@ -209,6 +216,7 @@ export function genFor (
     )
   }
 
+  // 然后返回了一个代码字符串
   el.forProcessed = true // avoid recursion
   return `${altHelper || '_l'}((${exp}),` +
     `function(${alias}${iterator1}${iterator2}){` +
