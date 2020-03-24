@@ -69,6 +69,7 @@ export default class Watcher {
     this.cb = cb
     this.id = ++uid // uid for batching
     this.active = true
+    // computed watcher
     this.dirty = this.lazy // for lazy watchers
     // 一些 Dep 相关的属性
     // deps 和 newDeps 表示 Watcher 实例持有的 Dep 实例的数组

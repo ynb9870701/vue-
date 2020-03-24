@@ -20,7 +20,8 @@ function createFunction (code, errors) {
 
 export function createCompileToFunctionFn (compile: Function): Function {
   const cache = Object.create(null)
-
+  // compileToFunctions 函数的最终定义
+  // 接收3个参数 编译模板 template，编译配置 options 和 Vue 实例 vm
   return function compileToFunctions (
     template: string,
     options?: CompilerOptions,
@@ -57,6 +58,8 @@ export function createCompileToFunctionFn (compile: Function): Function {
     }
 
     // compile
+    // 下面这行代码是核心的编译过程
+    // compile 函数在执行 createCompileToFunctionFn 的时候作为参数传入
     const compiled = compile(template, options)
 
     // check compilation errors/tips

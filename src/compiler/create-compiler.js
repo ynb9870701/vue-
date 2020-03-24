@@ -4,6 +4,10 @@ import { extend } from 'shared/util'
 import { detectErrors } from './error-detector'
 import { createCompileToFunctionFn } from './to-function'
 
+// 返回了一个 createCompiler 函数 它接收一个 baseOptions 的参数 返回的是一个对象
+// 包括 compile 方法属性和 compileToFunctions 属性
+// 这个 compileToFunctions 对应的就是 $mount 函数调用的 compileToFunctions 方法
+// compileToFunctions 它是调用 createCompileToFunctionFn 方法的返回值
 export function createCompilerCreator (baseCompile: Function): Function {
   return function createCompiler (baseOptions: CompilerOptions) {
     function compile (
@@ -17,7 +21,8 @@ export function createCompilerCreator (baseCompile: Function): Function {
       let warn = (msg, range, tip) => {
         (tip ? tips : errors).push(msg)
       }
-
+      
+      // 处理配置参数
       if (options) {
         if (process.env.NODE_ENV !== 'production' && options.outputSourceRange) {
           // $flow-disable-line
@@ -57,7 +62,9 @@ export function createCompilerCreator (baseCompile: Function): Function {
       }
 
       finalOptions.warn = warn
-
+      
+      // 执行编译过程
+      // baseCompile 在执行 createCompilerCreator 方法时作为参数传入
       const compiled = baseCompile(template.trim(), finalOptions)
       if (process.env.NODE_ENV !== 'production') {
         detectErrors(compiled.ast, warn)
