@@ -107,7 +107,8 @@ export function addHandler (
       name = 'mouseup'
     }
   }
-
+  
+  // 根据 modifiers 修饰符对事件名 name 做处理
   // check capture modifier
   if (modifiers.capture) {
     delete modifiers.capture
@@ -124,6 +125,7 @@ export function addHandler (
   }
 
   let events
+  // 根据 modifiers.native 判断是一个纯原生事件还是普通事件
   if (modifiers.native) {
     delete modifiers.native
     events = el.nativeEvents || (el.nativeEvents = {})

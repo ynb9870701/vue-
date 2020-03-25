@@ -59,6 +59,7 @@ export function genHandlers (
   const prefix = isNative ? 'nativeOn:' : 'on:'
   let staticHandlers = ``
   let dynamicHandlers = ``
+  // genHandlers 方法遍历事件对象 events
   for (const name in events) {
     const handlerCode = genHandler(events[name])
     if (events[name] && events[name].dynamic) {
@@ -97,16 +98,21 @@ function genHandler (handler: ASTElementHandler | Array<ASTElementHandler>): str
   if (!handler) {
     return 'function(){}'
   }
-
+  
+  // handler 如果是一个数组就遍历它然后递归调用 genHandler 方法来拼接结果
   if (Array.isArray(handler)) {
     return `[${handler.map(handler => genHandler(handler)).join(',')}]`
   }
-
+  
+  // 然后判断 handler.value 是一个函数的调用路径还是一个函数表达式
   const isMethodPath = simplePathRE.test(handler.value)
   const isFunctionExpression = fnExpRE.test(handler.value)
   const isFunctionInvocation = simplePathRE.test(handler.value.replace(fnInvokeRE, ''))
-
+  
+  // 接着对 modifiers 做判断 
+  // 对于没有 modifiers 的情况
   if (!handler.modifiers) {
+    // 根据 handler.value 不同情况进行处理 要么直接返回
     if (isMethodPath || isFunctionExpression) {
       return handler.value
     }
@@ -114,13 +120,19 @@ function genHandler (handler: ASTElementHandler | Array<ASTElementHandler>): str
     if (__WEEX__ && handler.params) {
       return genWeexHandler(handler.params, handler.value)
     }
+
+    // 要么返回一个函数包裹的表达式
     return `function($event){${
       isFunctionInvocation ? `return ${handler.value}` : handler.value
     }}` // inline statement
   } else {
+
+    // 对于有 modifiers 的情况
     let code = ''
     let genModifierCode = ''
     const keys = []
+
+    // 则对各种不同的 modifiers 情况做不同处理  添加相应的代码串
     for (const key in handler.modifiers) {
       if (modifierCode[key]) {
         genModifierCode += modifierCode[key]
